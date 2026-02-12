@@ -160,13 +160,13 @@ export const forgotPassword = TryCatch(async (req, res, next) => {
 
   const resetLink = `${process.env.FRONTEND_URL}/reset/${resetToken}`;
 
-  const message ={
+  const message = {
     to: email,
     subject: "Reset Your Password - Work-Ora",
     html: forgotPasswordTemplate(resetLink),
   };
 
-  publishToTopic("send-email",message);
+  publishToTopic("send-mail", message);
   
   res.json({
     message: "If that email exists, we have sent a reset link",

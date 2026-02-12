@@ -26,12 +26,14 @@ export const startSendMailConsumer = async () => {
           );
 
           const transporter = nodemailer.createTransport({
-            host: "smtp.gmail.com",
-            port: 465,
-            secure: true,
+            host: process.env.SMTP_HOST || "smtp.gmail.com",
+            port: Number(process.env.SMTP_PORT) || 587,
+            secure: process.env.SMTP_SECURE
+              ? process.env.SMTP_SECURE === "true"
+              : false,
             auth: {
-              user: "xyz",
-              pass: "yzx",
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
             },
           });
 
@@ -42,7 +44,7 @@ export const startSendMailConsumer = async () => {
             html,
           });
 
-          console.log(`✅ Email has beensent to ${to}.`);
+          console.log(`✅ Email has been sent to ${to}.`);
 
         } catch (error) {
             console.log(`❌ Failed to send email: ${error}`);
