@@ -21,6 +21,7 @@ async function initDB() {
         END$$;
         `;
 
+
     await sql`
         CREATE TABLE IF NOT EXISTS companies(
             company_id SERIAL PRIMARY KEY,
@@ -40,6 +41,7 @@ async function initDB() {
             title VARCHAR(255) NOT NULL,
             description TEXT NOT NULL,
             salary NUMERIC(10, 2),
+            location VARCHAR(255) NOT NULL,
             job_type job_type NOT NULL,
             openings NUMERIC(3, 1) NOT NULL,
             role VARCHAR(255) NOT NULL,

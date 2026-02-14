@@ -34,7 +34,10 @@ export const createCompany = TryCatch(
     `;
 
     if (existingCompanies.length > 0) {
-      throw new ErrorHandler(409, `Company with this name: ${name} already exists`);
+      throw new ErrorHandler(
+        409,
+        `Company with this name: ${name} already exists`,
+      );
     }
 
     const file = req.file;
@@ -49,9 +52,12 @@ export const createCompany = TryCatch(
       throw new ErrorHandler(500, "Failed to generate buffer");
     }
 
-    const {data} = await axios.post(`${process.env.UPLOAD_SERVICE_URL}/api/utils/upload`, {
-      buffer: fileBuffer.content,
-    });
+    const { data } = await axios.post(
+      `${process.env.UPLOAD_SERVICE_URL}/api/utils/upload`,
+      {
+        buffer: fileBuffer.content,
+      },
+    );
 
     const [newCompany] = await sql`
         INSERT INTO companies (name, description, website, logo, logo_public_id, recruiter_id) VALUES 
@@ -65,25 +71,78 @@ export const createCompany = TryCatch(
   },
 );
 
-export const deleteCompany = TryCatch(async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
+export const deleteCompany = TryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
 
-  const { companyId } = req.params;
+    const { companyId } = req.params;
 
-  const [company] = await sql`
+    const [company] = await sql`
     SELECT logo_public_id FROM companies WHERE company_id = ${companyId}
     AND recruiter_id = ${user?.user_id}
   `;
 
-  if (!company) {
-    throw new ErrorHandler(404, "Company not found or you do not have permission to delete it");
-  }
+    if (!company) {
+      throw new ErrorHandler(
+        404,
+        "Company not found or you do not have permission to delete it",
+      );
+    }
 
-  await sql`
+    await sql`
     DELETE FROM companies WHERE company_id = ${companyId}
   `;
 
+    res.json({
+      message: "Company and all associated jobs have been deleted successfully",
+    });
+  },
+);
+
+export const createJob = TryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+
+  if (!user) {
+    throw new ErrorHandler(401, "Authenticated user required");
+  }
+
+  if (user.role !== "recruiter") {
+    throw new ErrorHandler(403, "Forbidden:Only recruiters can create jobs");
+  }
+
+  const {
+    title,
+    description,
+    salary,
+    location,
+    role,
+    job_type,
+    work_location,
+    company_id,
+    openings,
+  } = req.body;
+
+  if (!title || !description || !salary || !location || !role || !openings) {
+    throw new ErrorHandler(400, "Please provide all required fields");
+  }
+
+  const [company] = await sql`
+    SELECT company_id FROM companies WHERE company_id = ${company_id}
+    AND recruiter_id = ${user.user_id}
+    `;
+
+  if (!company) {
+    throw new ErrorHandler(404, "Company not found");
+  }
+
+  const [newJob] = await sql`
+    INSERT INTO jobs (title, description, salary, location, role, job_type, work_location, company_id, posted_by_recruiter_id, openings) 
+    VALUES (${title}, ${description}, ${salary}, ${location}, ${role}, ${job_type}, ${work_location}, ${company_id}, ${user.user_id}, ${openings}) 
+    RETURNING *
+  `;
+
   res.json({
-    message: "Company and all associated jobs have been deleted successfully",
+    message: "Job created successfully",
+    job: newJob,
   });
 });
