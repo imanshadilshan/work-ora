@@ -279,3 +279,37 @@ export const getJobById = TryCatch(async (req: AuthenticatedRequest, res) => {
 
   res.json(job);
 });
+
+export const getAllApplicationsForJob = TryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+
+  if (!user) {
+    throw new ErrorHandler(401, "Authenticated user required");
+  }
+
+  if (user.role !== "recruiter") {
+    throw new ErrorHandler(403, "Forbidden: Only recruiters can view applications");
+  }
+
+  const { jobId } = req.params;
+
+  const [job] = await sql`
+    SELECT posted_by_recruiter_id FROM jobs WHERE job_id = ${jobId}
+  `;
+
+  if (!job) {
+    throw new ErrorHandler(404, "Job not found");
+  }
+
+  if (job.posted_by_recruiter_id !== user.user_id) {
+    throw new ErrorHandler(403, "Forbidden: You are not allowed to view applications for this job");
+  }
+
+  const applications = await sql`
+    SELECT * FROM applications WHERE job_id = ${jobId}
+    ORDER BY subscribed DESC, applied_at ASC
+  `;
+
+  res.json(applications);
+
+});
